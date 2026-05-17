@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bingo 1-90</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e1e2f, #2d2d55);
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: auto;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    .current-ball {
+      width: 180px;
+      height: 180px;
+      margin: 20px auto;
+      border-radius: 50%;
+      background: #ffd54f;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 5rem;
+      font-weight: bold;
+      box-shadow: 0 0 30px rgba(255,255,255,0.3);
+    }
+
+    .buttons {
+      margin: 20px 0;
+    }
+
+    button {
+      background: #ff4081;
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      margin: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      background: #ff5c95;
+    }
+
+    button:disabled {
+      background: #777;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .remaining {
+      margin-bottom: 25px;
+      font-size: 1.1rem;
+    }
+
+    .section {
+      margin-top: 35px;
+    }
+
+    .balls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .ball {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: auto;
+      font-weight: bold;
+      user-select: none;
+    }
+
+    .history-ball {
+      background: white;
+      color: #222;
+    }
+
+    .tracker-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .tracker-ball {
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.15);
+      color: white;
+      transition: 0.2s;
+    }
+
+    .tracker-ball.drawn {
+      background: #4caf50;
+      border-color: #81c784;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    @media (max-width: 700px) {
+      .tracker-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+
+      .current-ball {
+        width: 140px;
+        height: 140px;
+        font-size: 4rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <h1>🎱 Bingo 1-90</h1>
+
+  <div class="current-ball" id="currentBall">?</div>
+
+  <div class="buttons">
+    <button id="drawBtn">Sacar bola</button>
+    <button id="resetBtn">Reiniciar bingo</button>
+    <button id="resetTrackerBtn">Reiniciar tablero</button>
+  </div>
+
+  <div class="remaining" id="remaining">
+    Quedan 90 bolas
+  </div>
+
+  <div class="section">
+    <h2>Historial</h2>
+    <div class="balls-grid" id="history"></div>
+  </div>
+
+  <div class="section">
+    <h2>Tracker del tablero</h2>
+    <div class="tracker-grid" id="tracker"></div>
+  </div>
+
+</div>
+
+<script>
+  const drawBtn = document.getElementById("drawBtn");
+  const resetBtn = document.getElementById("resetBtn");
+  const resetTrackerBtn = document.getElementById("resetTrackerBtn");
+
+  const currentBall = document.getElementById("currentBall");
+  const historyDiv = document.getElementById("history");
+  const trackerDiv = document.getElementById("tracker");
+  const remainingDiv = document.getElementById("remaining");
+
+  let availableNumbers = [];
+  let drawnNumbers = [];
+
+  function createTracker() {
+    trackerDiv.innerHTML = "";
+
+    for (let i = 1; i <= 90; i++) {
+      const ball = document.createElement("div");
+      ball.className = "ball tracker-ball";
+      ball.id = `tracker-${i}`;
+      ball.textContent = i;
+
+      trackerDiv.appendChild(ball);
+    }
+  }
+
+  function initGame() {
+    availableNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
+    drawnNumbers = [];
+
+    currentBall.textContent = "?";
+    historyDiv.innerHTML = "";
+
+    remainingDiv.textContent = "Quedan 90 bolas";
+
+    drawBtn.disabled = false;
+
+    createTracker();
+  }
+
+  function resetTracker() {
+    for (let i = 1; i <= 90; i++) {
+      const ball = document.getElementById(`tracker-${i}`);
+      ball.classList.remove("drawn");
+    }
+  }
+
+  function speak(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = "es-ES";
+    utterance.rate = 0.9;
+
+    speechSynthesis.cancel();
+    speechSynthesis.speak(utterance);
+  }
+
+  function drawBall() {
+    if (availableNumbers.length === 0) {
+      speak("No quedan más bolas");
+      drawBtn.disabled = true;
+      return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+    const number = availableNumbers.splice(randomIndex, 1)[0];
+
+    drawnNumbers.push(number);
+
+    currentBall.textContent = number;
+
+    const historyBall = document.createElement("div");
+    historyBall.className = "ball history-ball";
+    historyBall.textContent = number;
+
+    historyDiv.prepend(historyBall);
+
+    const trackerBall = document.getElementById(`tracker-${number}`);
+    trackerBall.classList.add("drawn");
+
+    remainingDiv.textContent =
+      `Quedan ${availableNumbers.length} bolas`;
+
+    speak(`Número ${number}`);
+
+    if (availableNumbers.length === 0) {
+      speak("Fin del bingo");
+      drawBtn.disabled = true;
+    }
+  }
+
+  drawBtn.addEventListener("click", drawBall);
+  resetBtn.addEventListener("click", initGame);
+  resetTrackerBtn.addEventListener("click", resetTracker);
+
+  initGame();
+</script>
+
+</body>
+</html>
