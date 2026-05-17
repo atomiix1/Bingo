@@ -69,6 +69,25 @@
       transform: none;
     }
 
+    #autoplayBtn {
+      background: #4caf50;
+      font-size: 1.1rem;
+      font-weight: bold;
+      min-width: 160px;
+    }
+
+    #autoplayBtn:hover {
+      background: #45a049;
+    }
+
+    #autoplayBtn.paused {
+      background: #ff9800;
+    }
+
+    #autoplayBtn.paused:hover {
+      background: #e68900;
+    }
+
     .remaining {
       margin-bottom: 25px;
       font-size: 1.1rem;
@@ -145,6 +164,7 @@
   <div class="current-ball" id="currentBall">?</div>
 
   <div class="buttons">
+    <button id="autoplayBtn">Iniciar Partida</button>
     <button id="drawBtn">Sacar bola</button>
     <button id="resetBtn">Reiniciar bingo</button>
   </div>
@@ -166,9 +186,9 @@
 </div>
 
 <script>
+  const autoplayBtn = document.getElementById("autoplayBtn");
   const drawBtn = document.getElementById("drawBtn");
   const resetBtn = document.getElementById("resetBtn");
-  const resetTrackerBtn = document.getElementById("resetTrackerBtn");
 
   const currentBall = document.getElementById("currentBall");
   const historyDiv = document.getElementById("history");
@@ -177,6 +197,8 @@
 
   let availableNumbers = [];
   let drawnNumbers = [];
+  let autoplayActive = false;
+  let autoplayInterval = null;
 
   function createTracker() {
     trackerDiv.innerHTML = "";
@@ -201,7 +223,12 @@
     remainingDiv.textContent = "Quedan 90 bolas";
 
     drawBtn.disabled = false;
+    autoplayBtn.disabled = false;
+    autoplayBtn.textContent = "Iniciar Partida";
+    autoplayBtn.classList.remove("paused");
+    autoplayActive = false;
 
+    stopAutoplay();
     createTracker();
   }
 
@@ -225,6 +252,7 @@
     if (availableNumbers.length === 0) {
       speak("No quedan más bolas");
       drawBtn.disabled = true;
+      stopAutoplay();
       return;
     }
 
@@ -252,12 +280,48 @@
     if (availableNumbers.length === 0) {
       speak("Fin del bingo");
       drawBtn.disabled = true;
+      stopAutoplay();
     }
   }
 
+  function startAutoplay() {
+    if (autoplayActive) return;
+
+    autoplayActive = true;
+    autoplayBtn.textContent = "Pausa";
+    autoplayBtn.classList.add("paused");
+    drawBtn.disabled = true;
+
+    autoplayInterval = setInterval(() => {
+      if (availableNumbers.length > 0) {
+        drawBall();
+      }
+    }, 10000);
+  }
+
+  function stopAutoplay() {
+    autoplayActive = false;
+    autoplayBtn.textContent = "Iniciar Partida";
+    autoplayBtn.classList.remove("paused");
+    drawBtn.disabled = false;
+
+    if (autoplayInterval) {
+      clearInterval(autoplayInterval);
+      autoplayInterval = null;
+    }
+  }
+
+  function toggleAutoplay() {
+    if (autoplayActive) {
+      stopAutoplay();
+    } else {
+      startAutoplay();
+    }
+  }
+
+  autoplayBtn.addEventListener("click", toggleAutoplay);
   drawBtn.addEventListener("click", drawBall);
   resetBtn.addEventListener("click", initGame);
-  resetTrackerBtn.addEventListener("click", resetTracker);
 
   initGame();
 </script>
