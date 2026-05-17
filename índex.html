@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bingo 1-90</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e1e2f, #2d2d55);
+      color: white;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 95%;
+      max-width: 900px;
+      text-align: center;
+    }
+
+    h1 {
+      margin-bottom: 10px;
+      font-size: 3rem;
+    }
+
+    .current-ball {
+      width: 180px;
+      height: 180px;
+      margin: 20px auto;
+      border-radius: 50%;
+      background: #ffd54f;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 5rem;
+      font-weight: bold;
+      box-shadow: 0 0 30px rgba(255,255,255,0.3);
+    }
+
+    button {
+      background: #ff4081;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      margin: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1.2rem;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      background: #ff5c95;
+    }
+
+    button:disabled {
+      background: #777;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .history {
+      margin-top: 30px;
+    }
+
+    .balls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .ball {
+      background: white;
+      color: #222;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: auto;
+      font-weight: bold;
+    }
+
+    .remaining {
+      margin-top: 10px;
+      font-size: 1.1rem;
+      opacity: 0.9;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <h1>🎱 Bingo 1-90</h1>
+
+    <div class="current-ball" id="currentBall">?</div>
+
+    <button id="drawBtn">Sacar bola</button>
+    <button id="resetBtn">Reiniciar</button>
+
+    <div class="remaining" id="remaining">
+      Quedan 90 bolas
+    </div>
+
+    <div class="history">
+      <h2>Historial</h2>
+      <div class="balls-grid" id="history"></div>
+    </div>
+  </div>
+
+  <script>
+    const drawBtn = document.getElementById("drawBtn");
+    const resetBtn = document.getElementById("resetBtn");
+    const currentBall = document.getElementById("currentBall");
+    const historyDiv = document.getElementById("history");
+    const remainingDiv = document.getElementById("remaining");
+
+    let availableNumbers = [];
+    let drawnNumbers = [];
+
+    function initGame() {
+      availableNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
+      drawnNumbers = [];
+
+      currentBall.textContent = "?";
+      historyDiv.innerHTML = "";
+      remainingDiv.textContent = "Quedan 90 bolas";
+
+      drawBtn.disabled = false;
+    }
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "es-ES";
+      utterance.rate = 0.9;
+      speechSynthesis.speak(utterance);
+    }
+
+    function drawBall() {
+      if (availableNumbers.length === 0) {
+        speak("No quedan más bolas");
+        drawBtn.disabled = true;
+        return;
+      }
+
+      const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+      const number = availableNumbers.splice(randomIndex, 1)[0];
+
+      drawnNumbers.push(number);
+
+      currentBall.textContent = number;
+
+      const ball = document.createElement("div");
+      ball.className = "ball";
+      ball.textContent = number;
+
+      historyDiv.prepend(ball);
+
+      remainingDiv.textContent =
+        `Quedan ${availableNumbers.length} bolas`;
+
+      speak(`Número ${number}`);
+
+      if (availableNumbers.length === 0) {
+        speak("Fin del bingo");
+        drawBtn.disabled = true;
+      }
+    }
+
+    drawBtn.addEventListener("click", drawBall);
+    resetBtn.addEventListener("click", initGame);
+
+    initGame();
+  </script>
+
+</body>
+</html>
