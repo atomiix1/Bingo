@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Bingo 1-90 con Audios Generados</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #1e1e2f, #2d2d55);
+      color: white;
+      min-height: 100vh;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 100%;
+      margin: auto;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 10px;
+    }
+
+    .current-ball {
+      width: 180px;
+      height: 180px;
+      margin: 20px auto;
+      border-radius: 50%;
+      background: #ffd54f;
+      color: #222;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 5rem;
+      font-weight: bold;
+      box-shadow: 0 0 30px rgba(255,255,255,0.3);
+      transition: transform 0.3s ease;
+    }
+
+    .current-ball.pulse {
+      animation: pulse 0.5s ease-out;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 208, 79, 0.95);
+      color: #222;
+      padding: 20px 30px;
+      border-radius: 12px;
+      font-size: 2rem;
+      font-weight: bold;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateX(400px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .notification.disappear {
+      opacity: 0;
+      transform: translateX(400px);
+    }
+
+    .buttons {
+      margin: 20px 0;
+    }
+
+    button {
+      background: #ff4081;
+      color: white;
+      border: none;
+      padding: 15px 25px;
+      margin: 10px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: 0.2s;
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      background: #ff5c95;
+    }
+
+    button:disabled {
+      background: #777;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    #autoplayBtn {
+      background: #4caf50;
+      font-size: 1.1rem;
+      font-weight: bold;
+      min-width: 160px;
+    }
+
+    #autoplayBtn:hover {
+      background: #45a049;
+    }
+
+    #autoplayBtn.paused {
+      background: #ff9800;
+    }
+
+    #autoplayBtn.paused:hover {
+      background: #e68900;
+    }
+
+    .speed-control {
+      margin-top: 20px;
+    }
+
+    .speed-control label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    .speed-control input[type="range"] {
+      width: 250px;
+      max-width: 90%;
+    }
+
+    .remaining {
+      margin-bottom: 25px;
+      font-size: 1.1rem;
+    }
+
+    .section {
+      margin-top: 35px;
+    }
+
+    .balls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(50px, 1fr));
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .ball {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      margin: auto;
+      font-weight: bold;
+      user-select: none;
+    }
+
+    .history-ball {
+      background: white;
+      color: #222;
+    }
+
+    .tracker-grid {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .tracker-ball {
+      background: rgba(255,255,255,0.12);
+      border: 2px solid rgba(255,255,255,0.15);
+      color: white;
+      transition: 0.2s;
+    }
+
+    .tracker-ball.drawn {
+      background: #4caf50;
+      border-color: #81c784;
+      color: white;
+      transform: scale(1.05);
+    }
+
+    .loading-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1e1e2f, #2d2d55);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+    }
+
+    .loading-screen.hidden {
+      display: none;
+    }
+
+    .spinner {
+      border: 4px solid rgba(255,255,255,0.3);
+      border-top: 4px solid #ffd54f;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin-bottom: 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      font-size: 1.2rem;
+      color: #ffd54f;
+      margin-bottom: 10px;
+    }
+
+    .progress-bar {
+      width: 300px;
+      height: 10px;
+      background: rgba(255,255,255,0.2);
+      border-radius: 5px;
+      overflow: hidden;
+      margin-top: 20px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #4caf50;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    @media (max-width: 700px) {
+      .tracker-grid {
+        grid-template-columns: repeat(5, 1fr);
+      }
+
+      .current-ball {
+        width: 140px;
+        height: 140px;
+        font-size: 4rem;
+      }
+
+      .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        font-size: 1.5rem;
+      }
+
+      .progress-bar {
+        width: 200px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="loading-screen" id="loadingScreen">
+  <div class="spinner"></div>
+  <div class="loading-text">Generando audios...</div>
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill"></div>
+  </div>
+  <div id="progressText" style="margin-top: 10px; font-size: 0.9rem;">0/91</div>
+</div>
+
+<div class="container">
+
+  <h1>🎱 Bingo 1-90</h1>
+
+  <div class="current-ball" id="currentBall">?</div>
+
+  <div class="buttons">
+    <button id="autoplayBtn">Iniciar Partida</button>
+    <button id="drawBtn">Sacar bola</button>
+    <button id="resetBtn">Reiniciar bingo</button>
+  </div>
+
+  <div class="speed-control">
+    <label for="speedSlider">
+      Tiempo entre bolas:
+      <span id="speedValue">10</span> segundos
+    </label>
+
+    <input
+      type="range"
+      id="speedSlider"
+      min="2"
+      max="30"
+      value="10"
+      step="1"
+    />
+  </div>
+
+  <div class="remaining" id="remaining">
+    Quedan 90 bolas
+  </div>
+
+  <div class="section">
+    <h2>Historial</h2>
+    <div class="balls-grid" id="history"></div>
+  </div>
+
+  <div class="section">
+    <h2>Tracker del tablero</h2>
+    <div class="tracker-grid" id="tracker"></div>
+  </div>
+
+</div>
+
+<div class="notification" id="notification"></div>
+<audio id="audioPlayer"></audio>
+
+<script>
+  const autoplayBtn = document.getElementById("autoplayBtn");
+  const drawBtn = document.getElementById("drawBtn");
+  const resetBtn = document.getElementById("resetBtn");
+
+  const currentBall = document.getElementById("currentBall");
+  const historyDiv = document.getElementById("history");
+  const trackerDiv = document.getElementById("tracker");
+  const remainingDiv = document.getElementById("remaining");
+  const notificationDiv = document.getElementById("notification");
+  const audioPlayer = document.getElementById("audioPlayer");
+
+  const speedSlider = document.getElementById("speedSlider");
+  const speedValue = document.getElementById("speedValue");
+  
+  const loadingScreen = document.getElementById("loadingScreen");
+  const progressFill = document.getElementById("progressFill");
+  const progressText = document.getElementById("progressText");
+
+  let availableNumbers = [];
+  let drawnNumbers = [];
+  let autoplayActive = false;
+  let autoplayInterval = null;
+  let autoplayDelay = 10000;
+  let audioCache = {};
+
+  // Generar audio usando Web Audio API
+  async function generateAudio(number) {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const sampleRate = audioContext.sampleRate;
+      const duration = 1.5; // segundos
+      const buffer = audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+      const data = buffer.getChannelData(0);
+
+      // Parámetros de síntesis
+      const text = String(number);
+      const frequencies = getFrequenciesForText(text);
+      
+      let index = 0;
+      for (let freq of frequencies) {
+        const freq_duration = sampleRate * (duration / frequencies.length);
+        for (let i = 0; i < freq_duration; i++) {
+          const t = i / sampleRate;
+          // Generar tono senoidal con envolvente ADSR
+          const envelope = getEnvelope(t, duration / frequencies.length);
+          data[index] = Math.sin(2 * Math.PI * freq * t) * envelope * 0.3;
+          index++;
+        }
+      }
+
+      // Convertir buffer a Blob
+      const blob = await audioBufferToWav(buffer, audioContext.sampleRate);
+      return blob;
+    } catch (error) {
+      console.error(`Error generando audio para ${number}:`, error);
+      return null;
+    }
+  }
+
+  // Convertir AudioBuffer a WAV
+  async function audioBufferToWav(audioBuffer, sampleRate) {
+    const data = audioBuffer.getChannelData(0);
+    const channelData = [data];
+    const numberOfChannels = 1;
+    const length = data.length;
+    const bitDepth = 16;
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numberOfChannels * bytesPerSample;
+    const byteRate = sampleRate * blockAlign;
+    const dataSize = length * blockAlign;
+
+    const arrayBuffer = new ArrayBuffer(44 + dataSize);
+    const view = new DataView(arrayBuffer);
+
+    // RIFF chunk
+    const writeString = (offset, string) => {
+      for (let i = 0; i < string.length; i++) {
+        view.setUint8(offset + i, string.charCodeAt(i));
+      }
+    };
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(8, 'WAVE');
+
+    // fmt sub-chunk
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numberOfChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, byteRate, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+
+    // data sub-chunk
+    writeString(36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    let offset = 44;
+    for (const channelBuffer of channelData) {
+      for (let i = 0; i < length; i++) {
+        let sample = Math.max(-1, Math.min(1, channelBuffer[i]));
+        sample = sample < 0 ? sample * 0x8000 : sample * 0x7FFF;
+        view.setInt16(offset, sample, true);
+        offset += 2;
+      }
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  }
+
+  // Obtener frecuencias para el texto (síntesis de voz simple)
+  function getFrequenciesForText(text) {
+    const frequencies = [];
+    for (let char of text) {
+      const charCode = char.charCodeAt(0);
+      const baseFreq = 200 + (charCode * 10 % 400);
+      frequencies.push(baseFreq);
+      frequencies.push(baseFreq * 1.2);
+    }
+    return frequencies;
+  }
+
+  // Envolvente ADSR simplificada
+  function getEnvelope(t, duration) {
+    const attack = 0.1;
+    const release = 0.2;
+    
+    if (t < attack) {
+      return t / attack;
+    } else if (t > duration - release) {
+      return (duration - t) / release;
+    }
+    return 1;
+  }
+
+  // Generar y cachear todos los audios al cargar
+  async function generateAllAudios() {
+    const total = 91;
+    for (let i = 1; i <= 90; i++) {
+      const blob = await generateAudio(i);
+      if (blob) {
+        audioCache[i] = URL.createObjectURL(blob);
+      }
+      updateProgress(i, total);
+    }
+    
+    // Audio para "Fin del bingo"
+    const finBlob = await generateAudio("fin");
+    if (finBlob) {
+      audioCache['fin'] = URL.createObjectURL(finBlob);
+    }
+    updateProgress(91, total);
+
+    // Ocultar pantalla de carga
+    setTimeout(() => {
+      loadingScreen.classList.add('hidden');
+    }, 500);
+  }
+
+  function updateProgress(current, total) {
+    const percentage = (current / total) * 100;
+    progressFill.style.width = percentage + '%';
+    progressText.textContent = `${current}/${total}`;
+  }
+
+  function showNotification(text) {
+    notificationDiv.textContent = text;
+    notificationDiv.classList.remove("disappear");
+    notificationDiv.classList.add("show");
+
+    currentBall.classList.add("pulse");
+
+    setTimeout(() => {
+      notificationDiv.classList.remove("show");
+      notificationDiv.classList.add("disappear");
+    }, 2000);
+
+    setTimeout(() => {
+      currentBall.classList.remove("pulse");
+    }, 500);
+  }
+
+  function playAudio(number) {
+    showNotification(number);
+    
+    try {
+      const audioUrl = audioCache[number];
+      if (audioUrl) {
+        audioPlayer.src = audioUrl;
+        audioPlayer.play().catch(error => {
+          console.log("Error reproduciendo audio:", error);
+        });
+      }
+    } catch (error) {
+      console.error("Error al reproducir audio:", error);
+    }
+  }
+
+  function createTracker() {
+    trackerDiv.innerHTML = "";
+
+    for (let i = 1; i <= 90; i++) {
+      const ball = document.createElement("div");
+      ball.className = "ball tracker-ball";
+      ball.id = `tracker-${i}`;
+      ball.textContent = i;
+      trackerDiv.appendChild(ball);
+    }
+  }
+
+  function initGame() {
+    availableNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
+    drawnNumbers = [];
+    currentBall.textContent = "?";
+    historyDiv.innerHTML = "";
+    remainingDiv.textContent = "Quedan 90 bolas";
+    drawBtn.disabled = false;
+    autoplayBtn.disabled = false;
+    autoplayBtn.textContent = "Iniciar Partida";
+    autoplayBtn.classList.remove("paused");
+    autoplayActive = false;
+    stopAutoplay();
+    createTracker();
+  }
+
+  function drawBall() {
+    if (availableNumbers.length === 0) {
+      playAudio("fin");
+      drawBtn.disabled = true;
+      stopAutoplay();
+      return;
+    }
+
+    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+    const number = availableNumbers.splice(randomIndex, 1)[0];
+
+    drawnNumbers.push(number);
+    currentBall.textContent = number;
+
+    const historyBall = document.createElement("div");
+    historyBall.className = "ball history-ball";
+    historyBall.textContent = number;
+    historyDiv.prepend(historyBall);
+
+    const trackerBall = document.getElementById(`tracker-${number}`);
+    trackerBall.classList.add("drawn");
+
+    remainingDiv.textContent = `Quedan ${availableNumbers.length} bolas`;
+
+    playAudio(number);
+
+    if (availableNumbers.length === 0) {
+      setTimeout(() => {
+        playAudio("fin");
+      }, 1500);
+      drawBtn.disabled = true;
+      stopAutoplay();
+    }
+  }
+
+  function startAutoplay() {
+    if (autoplayActive) return;
+
+    autoplayActive = true;
+    autoplayBtn.textContent = "Pausa";
+    autoplayBtn.classList.add("paused");
+    drawBtn.disabled = true;
+
+    autoplayInterval = setInterval(() => {
+      if (availableNumbers.length > 0) {
+        drawBall();
+      }
+    }, autoplayDelay);
+  }
+
+  function stopAutoplay() {
+    autoplayActive = false;
+    autoplayBtn.textContent = "Iniciar Partida";
+    autoplayBtn.classList.remove("paused");
+    drawBtn.disabled = false;
+
+    if (autoplayInterval) {
+      clearInterval(autoplayInterval);
+      autoplayInterval = null;
+    }
+  }
+
+  function toggleAutoplay() {
+    if (autoplayActive) {
+      stopAutoplay();
+    } else {
+      startAutoplay();
+    }
+  }
+
+  speedSlider.addEventListener("input", () => {
+    const seconds = parseInt(speedSlider.value);
+    speedValue.textContent = seconds;
+    autoplayDelay = seconds * 1000;
+
+    if (autoplayActive) {
+      clearInterval(autoplayInterval);
+      autoplayInterval = setInterval(() => {
+        if (availableNumbers.length > 0) {
+          drawBall();
+        }
+      }, autoplayDelay);
+    }
+  });
+
+  autoplayBtn.addEventListener("click", toggleAutoplay);
+  drawBtn.addEventListener("click", drawBall);
+  resetBtn.addEventListener("click", initGame);
+
+  // Inicializar juego y generar audios
+  initGame();
+  generateAllAudios();
+</script>
+
+</body>
+</html>
