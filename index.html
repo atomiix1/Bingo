@@ -88,6 +88,21 @@
       background: #e68900;
     }
 
+    .speed-control {
+      margin-top: 20px;
+    }
+
+    .speed-control label {
+      display: block;
+      margin-bottom: 10px;
+      font-size: 1rem;
+    }
+
+    .speed-control input[type="range"] {
+      width: 250px;
+      max-width: 90%;
+    }
+
     .remaining {
       margin-bottom: 25px;
       font-size: 1.1rem;
@@ -169,6 +184,22 @@
     <button id="resetBtn">Reiniciar bingo</button>
   </div>
 
+  <div class="speed-control">
+    <label for="speedSlider">
+      Tiempo entre bolas:
+      <span id="speedValue">10</span> segundos
+    </label>
+
+    <input
+      type="range"
+      id="speedSlider"
+      min="2"
+      max="30"
+      value="10"
+      step="1"
+    />
+  </div>
+
   <div class="remaining" id="remaining">
     Quedan 90 bolas
   </div>
@@ -195,16 +226,23 @@
   const trackerDiv = document.getElementById("tracker");
   const remainingDiv = document.getElementById("remaining");
 
+  const speedSlider = document.getElementById("speedSlider");
+  const speedValue = document.getElementById("speedValue");
+
   let availableNumbers = [];
   let drawnNumbers = [];
+
   let autoplayActive = false;
   let autoplayInterval = null;
+
+  let autoplayDelay = 10000;
 
   function createTracker() {
     trackerDiv.innerHTML = "";
 
     for (let i = 1; i <= 90; i++) {
       const ball = document.createElement("div");
+
       ball.className = "ball tracker-ball";
       ball.id = `tracker-${i}`;
       ball.textContent = i;
@@ -215,6 +253,7 @@
 
   function initGame() {
     availableNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
+
     drawnNumbers = [];
 
     currentBall.textContent = "?";
@@ -224,23 +263,19 @@
 
     drawBtn.disabled = false;
     autoplayBtn.disabled = false;
+
     autoplayBtn.textContent = "Iniciar Partida";
     autoplayBtn.classList.remove("paused");
+
     autoplayActive = false;
 
     stopAutoplay();
     createTracker();
   }
 
-  function resetTracker() {
-    for (let i = 1; i <= 90; i++) {
-      const ball = document.getElementById(`tracker-${i}`);
-      ball.classList.remove("drawn");
-    }
-  }
-
   function speak(text) {
     const utterance = new SpeechSynthesisUtterance(text);
+
     utterance.lang = "es-ES";
     utterance.rate = 0.9;
 
@@ -251,25 +286,34 @@
   function drawBall() {
     if (availableNumbers.length === 0) {
       speak("No quedan más bolas");
+
       drawBtn.disabled = true;
+
       stopAutoplay();
+
       return;
     }
 
-    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
-    const number = availableNumbers.splice(randomIndex, 1)[0];
+    const randomIndex =
+      Math.floor(Math.random() * availableNumbers.length);
+
+    const number =
+      availableNumbers.splice(randomIndex, 1)[0];
 
     drawnNumbers.push(number);
 
     currentBall.textContent = number;
 
     const historyBall = document.createElement("div");
+
     historyBall.className = "ball history-ball";
     historyBall.textContent = number;
 
     historyDiv.prepend(historyBall);
 
-    const trackerBall = document.getElementById(`tracker-${number}`);
+    const trackerBall =
+      document.getElementById(`tracker-${number}`);
+
     trackerBall.classList.add("drawn");
 
     remainingDiv.textContent =
@@ -279,7 +323,9 @@
 
     if (availableNumbers.length === 0) {
       speak("Fin del bingo");
+
       drawBtn.disabled = true;
+
       stopAutoplay();
     }
   }
@@ -288,21 +334,25 @@
     if (autoplayActive) return;
 
     autoplayActive = true;
+
     autoplayBtn.textContent = "Pausa";
     autoplayBtn.classList.add("paused");
+
     drawBtn.disabled = true;
 
     autoplayInterval = setInterval(() => {
       if (availableNumbers.length > 0) {
         drawBall();
       }
-    }, 10000);
+    }, autoplayDelay);
   }
 
   function stopAutoplay() {
     autoplayActive = false;
+
     autoplayBtn.textContent = "Iniciar Partida";
     autoplayBtn.classList.remove("paused");
+
     drawBtn.disabled = false;
 
     if (autoplayInterval) {
@@ -319,8 +369,29 @@
     }
   }
 
+  speedSlider.addEventListener("input", () => {
+    const seconds = parseInt(speedSlider.value);
+
+    speedValue.textContent = seconds;
+
+    autoplayDelay = seconds * 1000;
+
+    // Reinicia el intervalo si ya está activo
+    if (autoplayActive) {
+      clearInterval(autoplayInterval);
+
+      autoplayInterval = setInterval(() => {
+        if (availableNumbers.length > 0) {
+          drawBall();
+        }
+      }, autoplayDelay);
+    }
+  });
+
   autoplayBtn.addEventListener("click", toggleAutoplay);
+
   drawBtn.addEventListener("click", drawBall);
+
   resetBtn.addEventListener("click", initGame);
 
   initGame();
