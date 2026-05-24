@@ -1,0 +1,7 @@
+# Dependencias para generar audios en Bingo
+
+# Opción 1: gTTS (requiere conexión a internet)
+gTTS==2.4.0
+
+# Opción 2: pyttsx3 (sin conexión a internet, depende del sistema operativo)
+pyttsx3==2.90
