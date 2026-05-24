@@ -86,20 +86,6 @@
       transform: translateX(400px);
     }
 
-    .tts-status {
-      margin-bottom: 15px;
-      font-size: 0.9rem;
-      color: #b0bec5;
-    }
-
-    .tts-status.available {
-      color: #81c784;
-    }
-
-    .tts-status.unavailable {
-      color: #ef5350;
-    }
-
     .buttons {
       margin: 20px 0;
     }
@@ -215,15 +201,6 @@
       transform: scale(1.05);
     }
 
-    .info-box {
-      background: rgba(100, 100, 150, 0.3);
-      border-left: 4px solid #4caf50;
-      padding: 15px;
-      margin: 15px 0;
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-
     @media (max-width: 700px) {
       .tracker-grid {
         grid-template-columns: repeat(5, 1fr);
@@ -249,14 +226,6 @@
 <div class="container">
 
   <h1>🎱 Bingo 1-90</h1>
-
-  <div class="tts-status" id="ttsStatus">
-    ✓ Sonido disponible
-  </div>
-
-  <div class="info-box" id="infoBox" style="display:none;">
-    Cargando audios... Por favor espera.
-  </div>
 
   <div class="current-ball" id="currentBall">?</div>
 
@@ -299,7 +268,6 @@
 </div>
 
 <div class="notification" id="notification"></div>
-<audio id="audioPlayer"></audio>
 
 <script>
   const autoplayBtn = document.getElementById("autoplayBtn");
@@ -311,54 +279,21 @@
   const trackerDiv = document.getElementById("tracker");
   const remainingDiv = document.getElementById("remaining");
   const notificationDiv = document.getElementById("notification");
-  const ttsStatus = document.getElementById("ttsStatus");
-  const infoBox = document.getElementById("infoBox");
-  const audioPlayer = document.getElementById("audioPlayer");
 
   const speedSlider = document.getElementById("speedSlider");
   const speedValue = document.getElementById("speedValue");
 
   let availableNumbers = [];
   let drawnNumbers = [];
-  let audioCache = {};
-  let audioLoading = false;
-
   let autoplayActive = false;
   let autoplayInterval = null;
-
   let autoplayDelay = 10000;
-
-  // Detectar soporte de Web Speech API
-  const ttsSupported = typeof window.SpeechSynthesisUtterance !== 'undefined' && 
-                       typeof window.speechSynthesis !== 'undefined';
-
-  // URLs de audios pregrabados en múltiples formatos y CDNs
-  const AUDIO_URLS = {
-    '1': ['https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/text-to-speech/1.wav'],
-    // Alternativa: usar un servidor propio o Cloudinary
-  };
-
-  function generateAudioUrl(number) {
-    // Generar URL usando API de síntesis online
-    // Usando forvo (pronunciación de hablantes nativos)
-    return `https://forvo.com/download/mp3/${number}/es/`;
-  }
-
-  function updateTtsStatus() {
-    if (!ttsSupported) {
-      ttsStatus.textContent = "🔊 Modo: Audios grabados";
-      ttsStatus.classList.add("unavailable");
-    } else {
-      ttsStatus.classList.add("available");
-    }
-  }
 
   function showNotification(text) {
     notificationDiv.textContent = text;
     notificationDiv.classList.remove("disappear");
     notificationDiv.classList.add("show");
 
-    // Reproducir animación de pulso en la bola
     currentBall.classList.add("pulse");
 
     setTimeout(() => {
@@ -371,67 +306,19 @@
     }, 500);
   }
 
-  function playAudio(number) {
-    try {
-      // Usar Web Audio API para crear síntesis en el navegador
-      const synth = window.speechSynthesis;
-      
-      // Primero intentar con TTS del sistema
-      if (ttsSupported && synth) {
-        try {
-          synth.cancel();
-          const utterance = new SpeechSynthesisUtterance(String(number));
-          utterance.lang = 'es-ES';
-          utterance.rate = 0.9;
-          utterance.pitch = 1.0;
-          utterance.volume = 1.0;
-          
-          synth.speak(utterance);
-          return;
-        } catch (error) {
-          console.log("TTS falló, intentando alternativa...");
-        }
-      }
-
-      // Fallback: reproducir audio generado
-      // Usar tts.ai o similares
-      const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech?text=${encodeURIComponent(number)}&language_code=es`;
-      
-      // Como alternativa más simple, usar fetch de audio web
-      const audioElement = document.createElement('audio');
-      audioElement.setAttribute('crossorigin', 'anonymous');
-      
-      // Intentar con diferentes servicios
-      const urls = [
-        `https://tts.api.cloud.yandex.net/v1/say?text=${number}&lang=es&speaker=omazh`,
-        `https://translate.google.com/translate_tts?ie=UTF-8&q=${number}&tl=es-ES&client=tw-ob`,
-      ];
-
-      let urlIndex = 0;
-
-      function tryPlayAudio() {
-        if (urlIndex >= urls.length) {
-          console.warn("No se pudo reproducir el audio");
-          return;
-        }
-
-        audioElement.src = urls[urlIndex];
-        audioElement.play().catch(() => {
-          urlIndex++;
-          tryPlayAudio();
-        });
-      }
-
-      tryPlayAudio();
-
-    } catch (error) {
-      console.error("Error al reproducir audio:", error);
+  function speakNumber(number) {
+    showNotification(number);
+    
+    // Usar Web Speech API para pronunciar el número
+    if ('speechSynthesis' in window) {
+      speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(String(number));
+      utterance.lang = 'es-ES';
+      utterance.rate = 0.9;
+      utterance.pitch = 1.0;
+      utterance.volume = 1.0;
+      speechSynthesis.speak(utterance);
     }
-  }
-
-  function speak(text) {
-    showNotification(text);
-    playAudio(text);
   }
 
   function createTracker() {
@@ -439,80 +326,59 @@
 
     for (let i = 1; i <= 90; i++) {
       const ball = document.createElement("div");
-
       ball.className = "ball tracker-ball";
       ball.id = `tracker-${i}`;
       ball.textContent = i;
-
       trackerDiv.appendChild(ball);
     }
   }
 
   function initGame() {
     availableNumbers = Array.from({ length: 90 }, (_, i) => i + 1);
-
     drawnNumbers = [];
-
     currentBall.textContent = "?";
     historyDiv.innerHTML = "";
-
     remainingDiv.textContent = "Quedan 90 bolas";
-
     drawBtn.disabled = false;
     autoplayBtn.disabled = false;
-
     autoplayBtn.textContent = "Iniciar Partida";
     autoplayBtn.classList.remove("paused");
-
     autoplayActive = false;
-
     stopAutoplay();
     createTracker();
   }
 
   function drawBall() {
     if (availableNumbers.length === 0) {
-      speak("No quedan más bolas");
-
+      speakNumber("Fin del bingo");
       drawBtn.disabled = true;
-
       stopAutoplay();
-
       return;
     }
 
-    const randomIndex =
-      Math.floor(Math.random() * availableNumbers.length);
-
-    const number =
-      availableNumbers.splice(randomIndex, 1)[0];
+    const randomIndex = Math.floor(Math.random() * availableNumbers.length);
+    const number = availableNumbers.splice(randomIndex, 1)[0];
 
     drawnNumbers.push(number);
-
     currentBall.textContent = number;
 
     const historyBall = document.createElement("div");
-
     historyBall.className = "ball history-ball";
     historyBall.textContent = number;
-
     historyDiv.prepend(historyBall);
 
-    const trackerBall =
-      document.getElementById(`tracker-${number}`);
-
+    const trackerBall = document.getElementById(`tracker-${number}`);
     trackerBall.classList.add("drawn");
 
-    remainingDiv.textContent =
-      `Quedan ${availableNumbers.length} bolas`;
+    remainingDiv.textContent = `Quedan ${availableNumbers.length} bolas`;
 
-    speak(`${number}`);
+    speakNumber(number);
 
     if (availableNumbers.length === 0) {
-      speak("Fin del bingo");
-
+      setTimeout(() => {
+        speakNumber("Fin del bingo");
+      }, 500);
       drawBtn.disabled = true;
-
       stopAutoplay();
     }
   }
@@ -521,10 +387,8 @@
     if (autoplayActive) return;
 
     autoplayActive = true;
-
     autoplayBtn.textContent = "Pausa";
     autoplayBtn.classList.add("paused");
-
     drawBtn.disabled = true;
 
     autoplayInterval = setInterval(() => {
@@ -536,10 +400,8 @@
 
   function stopAutoplay() {
     autoplayActive = false;
-
     autoplayBtn.textContent = "Iniciar Partida";
     autoplayBtn.classList.remove("paused");
-
     drawBtn.disabled = false;
 
     if (autoplayInterval) {
@@ -558,15 +420,11 @@
 
   speedSlider.addEventListener("input", () => {
     const seconds = parseInt(speedSlider.value);
-
     speedValue.textContent = seconds;
-
     autoplayDelay = seconds * 1000;
 
-    // Reinicia el intervalo si ya está activo
     if (autoplayActive) {
       clearInterval(autoplayInterval);
-
       autoplayInterval = setInterval(() => {
         if (availableNumbers.length > 0) {
           drawBall();
@@ -576,15 +434,11 @@
   });
 
   autoplayBtn.addEventListener("click", toggleAutoplay);
-
   drawBtn.addEventListener("click", drawBall);
-
   resetBtn.addEventListener("click", initGame);
 
   // Inicializar
-  updateTtsStatus();
   initGame();
-  infoBox.style.display = "none";
 </script>
 
 </body>
