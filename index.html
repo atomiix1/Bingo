@@ -291,9 +291,12 @@
   let autoplayInterval = null;
   let autoplayDelay = 10000;
 
-  // Base URL para audios usando Google Translate TTS
-  function getAudioUrl(number) {
-    return `https://translate.google.com/translate_tts?ie=UTF-8&tl=es&client=tw-ob&q=${number}`;
+  function getAudioPath(value) {
+    if (value === "Fin del bingo") {
+      return "fin_de_la_partida.mp3";
+    }
+
+    return `${value}.mp3`;
   }
 
   function showNotification(text) {
@@ -313,15 +316,20 @@
     }, 500);
   }
 
-  function playAudio(number) {
-    showNotification(number);
-    
+  function playAudio(value) {
+    showNotification(value);
+
     try {
-      const audioUrl = getAudioUrl(number);
-      audioPlayer.src = audioUrl;
+      audioPlayer.pause();
+      audioPlayer.currentTime = 0;
+
+      // Evita caché durante pruebas
+      audioPlayer.src = getAudioPath(value) + "?v=" + Date.now();
+
       audioPlayer.play().catch(error => {
         console.log("Error reproduciendo audio:", error);
       });
+
     } catch (error) {
       console.error("Error al reproducir audio:", error);
     }
@@ -449,3 +457,15 @@
 
 </body>
 </html>
+```
+
+## Estructura esperada
+
+```text
+/index.html
+/1.mp3
+/2.mp3
+...
+/90.mp3
+/fin_de_la_partida.mp3
+```
