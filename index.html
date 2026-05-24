@@ -286,6 +286,7 @@
 </div>
 
 <div class="notification" id="notification"></div>
+<audio id="audioPlayer"></audio>
 
 <script>
   const autoplayBtn = document.getElementById("autoplayBtn");
@@ -298,6 +299,7 @@
   const remainingDiv = document.getElementById("remaining");
   const notificationDiv = document.getElementById("notification");
   const ttsStatus = document.getElementById("ttsStatus");
+  const audioPlayer = document.getElementById("audioPlayer");
 
   const speedSlider = document.getElementById("speedSlider");
   const speedValue = document.getElementById("speedValue");
@@ -316,7 +318,7 @@
 
   function updateTtsStatus() {
     if (!ttsSupported) {
-      ttsStatus.textContent = "⚠ Sonido no disponible (usando notificaciones visuales)";
+      ttsStatus.textContent = "🔊 Usando audios grabados";
       ttsStatus.classList.add("unavailable");
     } else {
       ttsStatus.classList.add("available");
@@ -341,9 +343,23 @@
     }, 500);
   }
 
+  function playAudio(number) {
+    // Usar archivos de audio de Google Translate
+    // Este es un método alternativo que no requiere archivos locales
+    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${number}&tl=es&client=tw-ob`;
+    
+    audioPlayer.src = audioUrl;
+    audioPlayer.play().catch(error => {
+      console.warn("No se pudo reproducir el audio:", error);
+    });
+  }
+
   function speak(text) {
+    showNotification(text);
+
     if (!ttsSupported) {
-      showNotification(text);
+      // Usar audios grabados
+      playAudio(text);
       return;
     }
 
@@ -354,12 +370,9 @@
 
       speechSynthesis.cancel();
       speechSynthesis.speak(utterance);
-
-      // También mostrar notificación visual como respaldo
-      showNotification(text);
     } catch (error) {
-      console.warn("Error al usar TTS, usando fallback visual:", error);
-      showNotification(text);
+      console.warn("Error al usar TTS, usando audios:", error);
+      playAudio(text);
     }
   }
 
