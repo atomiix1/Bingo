@@ -40,6 +40,64 @@
       font-size: 5rem;
       font-weight: bold;
       box-shadow: 0 0 30px rgba(255,255,255,0.3);
+      transition: transform 0.3s ease;
+    }
+
+    .current-ball.pulse {
+      animation: pulse 0.5s ease-out;
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+      }
+      50% {
+        transform: scale(1.1);
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: rgba(255, 208, 79, 0.95);
+      color: #222;
+      padding: 20px 30px;
+      border-radius: 12px;
+      font-size: 2rem;
+      font-weight: bold;
+      z-index: 1000;
+      opacity: 0;
+      transform: translateX(400px);
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    }
+
+    .notification.show {
+      opacity: 1;
+      transform: translateX(0);
+    }
+
+    .notification.disappear {
+      opacity: 0;
+      transform: translateX(400px);
+    }
+
+    .tts-status {
+      margin-bottom: 15px;
+      font-size: 0.9rem;
+      color: #b0bec5;
+    }
+
+    .tts-status.available {
+      color: #81c784;
+    }
+
+    .tts-status.unavailable {
+      color: #ef5350;
     }
 
     .buttons {
@@ -167,6 +225,13 @@
         height: 140px;
         font-size: 4rem;
       }
+
+      .notification {
+        top: 10px;
+        right: 10px;
+        left: 10px;
+        font-size: 1.5rem;
+      }
     }
   </style>
 </head>
@@ -175,6 +240,10 @@
 <div class="container">
 
   <h1>🎱 Bingo 1-90</h1>
+
+  <div class="tts-status" id="ttsStatus">
+    ✓ Sonido disponible
+  </div>
 
   <div class="current-ball" id="currentBall">?</div>
 
@@ -216,6 +285,8 @@
 
 </div>
 
+<div class="notification" id="notification"></div>
+
 <script>
   const autoplayBtn = document.getElementById("autoplayBtn");
   const drawBtn = document.getElementById("drawBtn");
@@ -225,6 +296,8 @@
   const historyDiv = document.getElementById("history");
   const trackerDiv = document.getElementById("tracker");
   const remainingDiv = document.getElementById("remaining");
+  const notificationDiv = document.getElementById("notification");
+  const ttsStatus = document.getElementById("ttsStatus");
 
   const speedSlider = document.getElementById("speedSlider");
   const speedValue = document.getElementById("speedValue");
@@ -236,6 +309,59 @@
   let autoplayInterval = null;
 
   let autoplayDelay = 10000;
+
+  // Detectar soporte de Web Speech API
+  const ttsSupported = typeof window.SpeechSynthesisUtterance !== 'undefined' && 
+                       typeof window.speechSynthesis !== 'undefined';
+
+  function updateTtsStatus() {
+    if (!ttsSupported) {
+      ttsStatus.textContent = "⚠ Sonido no disponible (usando notificaciones visuales)";
+      ttsStatus.classList.add("unavailable");
+    } else {
+      ttsStatus.classList.add("available");
+    }
+  }
+
+  function showNotification(text) {
+    notificationDiv.textContent = text;
+    notificationDiv.classList.remove("disappear");
+    notificationDiv.classList.add("show");
+
+    // Reproducir animación de pulso en la bola
+    currentBall.classList.add("pulse");
+
+    setTimeout(() => {
+      notificationDiv.classList.remove("show");
+      notificationDiv.classList.add("disappear");
+    }, 2000);
+
+    setTimeout(() => {
+      currentBall.classList.remove("pulse");
+    }, 500);
+  }
+
+  function speak(text) {
+    if (!ttsSupported) {
+      showNotification(text);
+      return;
+    }
+
+    try {
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = "es-ES";
+      utterance.rate = 0.9;
+
+      speechSynthesis.cancel();
+      speechSynthesis.speak(utterance);
+
+      // También mostrar notificación visual como respaldo
+      showNotification(text);
+    } catch (error) {
+      console.warn("Error al usar TTS, usando fallback visual:", error);
+      showNotification(text);
+    }
+  }
 
   function createTracker() {
     trackerDiv.innerHTML = "";
@@ -271,16 +397,6 @@
 
     stopAutoplay();
     createTracker();
-  }
-
-  function speak(text) {
-    const utterance = new SpeechSynthesisUtterance(text);
-
-    utterance.lang = "es-ES";
-    utterance.rate = 0.9;
-
-    speechSynthesis.cancel();
-    speechSynthesis.speak(utterance);
   }
 
   function drawBall() {
@@ -394,6 +510,8 @@
 
   resetBtn.addEventListener("click", initGame);
 
+  // Inicializar
+  updateTtsStatus();
   initGame();
 </script>
 
