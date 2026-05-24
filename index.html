@@ -268,6 +268,7 @@
 </div>
 
 <div class="notification" id="notification"></div>
+<audio id="audioPlayer"></audio>
 
 <script>
   const autoplayBtn = document.getElementById("autoplayBtn");
@@ -279,6 +280,7 @@
   const trackerDiv = document.getElementById("tracker");
   const remainingDiv = document.getElementById("remaining");
   const notificationDiv = document.getElementById("notification");
+  const audioPlayer = document.getElementById("audioPlayer");
 
   const speedSlider = document.getElementById("speedSlider");
   const speedValue = document.getElementById("speedValue");
@@ -288,6 +290,11 @@
   let autoplayActive = false;
   let autoplayInterval = null;
   let autoplayDelay = 10000;
+
+  // Base URL para audios usando Google Translate TTS
+  function getAudioUrl(number) {
+    return `https://translate.google.com/translate_tts?ie=UTF-8&tl=es&client=tw-ob&q=${number}`;
+  }
 
   function showNotification(text) {
     notificationDiv.textContent = text;
@@ -306,18 +313,17 @@
     }, 500);
   }
 
-  function speakNumber(number) {
+  function playAudio(number) {
     showNotification(number);
     
-    // Usar Web Speech API para pronunciar el número
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(String(number));
-      utterance.lang = 'es-ES';
-      utterance.rate = 0.9;
-      utterance.pitch = 1.0;
-      utterance.volume = 1.0;
-      speechSynthesis.speak(utterance);
+    try {
+      const audioUrl = getAudioUrl(number);
+      audioPlayer.src = audioUrl;
+      audioPlayer.play().catch(error => {
+        console.log("Error reproduciendo audio:", error);
+      });
+    } catch (error) {
+      console.error("Error al reproducir audio:", error);
     }
   }
 
@@ -350,7 +356,7 @@
 
   function drawBall() {
     if (availableNumbers.length === 0) {
-      speakNumber("Fin del bingo");
+      playAudio("Fin del bingo");
       drawBtn.disabled = true;
       stopAutoplay();
       return;
@@ -372,12 +378,12 @@
 
     remainingDiv.textContent = `Quedan ${availableNumbers.length} bolas`;
 
-    speakNumber(number);
+    playAudio(number);
 
     if (availableNumbers.length === 0) {
       setTimeout(() => {
-        speakNumber("Fin del bingo");
-      }, 500);
+        playAudio("Fin del bingo");
+      }, 1500);
       drawBtn.disabled = true;
       stopAutoplay();
     }
