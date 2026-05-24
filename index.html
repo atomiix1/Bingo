@@ -215,6 +215,15 @@
       transform: scale(1.05);
     }
 
+    .info-box {
+      background: rgba(100, 100, 150, 0.3);
+      border-left: 4px solid #4caf50;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+
     @media (max-width: 700px) {
       .tracker-grid {
         grid-template-columns: repeat(5, 1fr);
@@ -243,6 +252,10 @@
 
   <div class="tts-status" id="ttsStatus">
     ✓ Sonido disponible
+  </div>
+
+  <div class="info-box" id="infoBox" style="display:none;">
+    Cargando audios... Por favor espera.
   </div>
 
   <div class="current-ball" id="currentBall">?</div>
@@ -299,6 +312,7 @@
   const remainingDiv = document.getElementById("remaining");
   const notificationDiv = document.getElementById("notification");
   const ttsStatus = document.getElementById("ttsStatus");
+  const infoBox = document.getElementById("infoBox");
   const audioPlayer = document.getElementById("audioPlayer");
 
   const speedSlider = document.getElementById("speedSlider");
@@ -306,6 +320,8 @@
 
   let availableNumbers = [];
   let drawnNumbers = [];
+  let audioCache = {};
+  let audioLoading = false;
 
   let autoplayActive = false;
   let autoplayInterval = null;
@@ -316,9 +332,21 @@
   const ttsSupported = typeof window.SpeechSynthesisUtterance !== 'undefined' && 
                        typeof window.speechSynthesis !== 'undefined';
 
+  // URLs de audios pregrabados en múltiples formatos y CDNs
+  const AUDIO_URLS = {
+    '1': ['https://storage.googleapis.com/google-code-archive-downloads/v2/code.google.com/text-to-speech/1.wav'],
+    // Alternativa: usar un servidor propio o Cloudinary
+  };
+
+  function generateAudioUrl(number) {
+    // Generar URL usando API de síntesis online
+    // Usando forvo (pronunciación de hablantes nativos)
+    return `https://forvo.com/download/mp3/${number}/es/`;
+  }
+
   function updateTtsStatus() {
     if (!ttsSupported) {
-      ttsStatus.textContent = "🔊 Usando audios grabados";
+      ttsStatus.textContent = "🔊 Modo: Audios grabados";
       ttsStatus.classList.add("unavailable");
     } else {
       ttsStatus.classList.add("available");
@@ -344,36 +372,66 @@
   }
 
   function playAudio(number) {
-    // Usar archivos de audio de Google Translate
-    // Este es un método alternativo que no requiere archivos locales
-    const audioUrl = `https://translate.google.com/translate_tts?ie=UTF-8&q=${number}&tl=es&client=tw-ob`;
-    
-    audioPlayer.src = audioUrl;
-    audioPlayer.play().catch(error => {
-      console.warn("No se pudo reproducir el audio:", error);
-    });
+    try {
+      // Usar Web Audio API para crear síntesis en el navegador
+      const synth = window.speechSynthesis;
+      
+      // Primero intentar con TTS del sistema
+      if (ttsSupported && synth) {
+        try {
+          synth.cancel();
+          const utterance = new SpeechSynthesisUtterance(String(number));
+          utterance.lang = 'es-ES';
+          utterance.rate = 0.9;
+          utterance.pitch = 1.0;
+          utterance.volume = 1.0;
+          
+          synth.speak(utterance);
+          return;
+        } catch (error) {
+          console.log("TTS falló, intentando alternativa...");
+        }
+      }
+
+      // Fallback: reproducir audio generado
+      // Usar tts.ai o similares
+      const ttsUrl = `https://api.elevenlabs.io/v1/text-to-speech?text=${encodeURIComponent(number)}&language_code=es`;
+      
+      // Como alternativa más simple, usar fetch de audio web
+      const audioElement = document.createElement('audio');
+      audioElement.setAttribute('crossorigin', 'anonymous');
+      
+      // Intentar con diferentes servicios
+      const urls = [
+        `https://tts.api.cloud.yandex.net/v1/say?text=${number}&lang=es&speaker=omazh`,
+        `https://translate.google.com/translate_tts?ie=UTF-8&q=${number}&tl=es-ES&client=tw-ob`,
+      ];
+
+      let urlIndex = 0;
+
+      function tryPlayAudio() {
+        if (urlIndex >= urls.length) {
+          console.warn("No se pudo reproducir el audio");
+          return;
+        }
+
+        audioElement.src = urls[urlIndex];
+        audioElement.play().catch(() => {
+          urlIndex++;
+          tryPlayAudio();
+        });
+      }
+
+      tryPlayAudio();
+
+    } catch (error) {
+      console.error("Error al reproducir audio:", error);
+    }
   }
 
   function speak(text) {
     showNotification(text);
-
-    if (!ttsSupported) {
-      // Usar audios grabados
-      playAudio(text);
-      return;
-    }
-
-    try {
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = "es-ES";
-      utterance.rate = 0.9;
-
-      speechSynthesis.cancel();
-      speechSynthesis.speak(utterance);
-    } catch (error) {
-      console.warn("Error al usar TTS, usando audios:", error);
-      playAudio(text);
-    }
+    playAudio(text);
   }
 
   function createTracker() {
@@ -526,6 +584,7 @@
   // Inicializar
   updateTtsStatus();
   initGame();
+  infoBox.style.display = "none";
 </script>
 
 </body>
